@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState, useRef} from 'react';
 import './App.css';
 
 const stories = [
@@ -20,13 +20,42 @@ const stories = [
   }
 ];
 
+  /*
+  this useEffect is used to trigger the side-effect
+  each time the searchTerm changes
+
+  useEffect params:
+    - function that runs side-effect
+    - dependency array of variables
+
+  important notes: 
+    - leaving out dependencies would make function
+        run on every render of component
+    - [] the function for side-effect is only called once
+  */
+
+const useSemiPersistentState = (key, initialState) => {
+  const [value, setValue] = useState(
+    localStorage.getItem(key) || initialState
+  );
+
+  useEffect(() => {
+    localStorage.setItem(key, value);
+  }, [value, key]);
+
+  return [value, setValue];
+}
+
 
 const App = () => {
-  
-  const [searchTerm, setSearchTerm] = useState('React');
+
+  const [searchTerm, setSearchTerm] = useSemiPersistentState('search', 'React');
+
   
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
+
+    localStorage.setItem('search', event.target.value);
   };
 
   const searchedStories = stories.filter((story) => 
@@ -37,7 +66,15 @@ const App = () => {
     <div>
       <h1>My Hacker Stories</h1>
 
-      <Search search={searchTerm} onSearch={handleSearch}/>
+      <InputWithLabel 
+        id="search"
+        label="Search"
+        isFocused
+        value={searchTerm}
+        onInputChange={handleSearch}
+      >
+        <strong>Search: </strong>
+      </InputWithLabel>
 
       <hr />
 
@@ -51,31 +88,46 @@ const List = ({list}) => {
   return (
     <ul>
       {list.map((item) => (
-        <Item key={item.objectID} {...item} />
+        <Item key={item.objectID} item={item} />
       ))}
     </ul>
   );
 }
 
-const Item = ({title, url, author, num_comments, points}) => (
+const Item = ({item}) => (
   <li>
     <span>
-      <a href={url}>{title}</a>
+      <a href={item.url}>{item.title}</a>
     </span>
-    <span>{author}</span>
-    <span>{num_comments}</span>
-    <span>{points}</span>
+    <span>{item.author}</span>
+    <span>{item.num_comments}</span>
+    <span>{item.points}</span>
   </li>
 );
 
-const Search = ({onSearch, search}) => {
+const InputWithLabel = ({ id, label, value, isFocused, type = 'text', onInputChange, children }) => {
+  /*
+    
+  */
+  const inputRef = useRef();
+  useEffect(() => {
+    if(isFocused && inputRef.current){
+      inputRef.current.focus();
+    }
+  }, [isFocused]);
 
   return (
-    <div>
-      <label htmlFor="search">Search: </label>
-      <input id="search" type="text" onChange={onSearch} value={search}/>
-    </div>
-  )
+    <>
+      <label htmlFor={id}>{children}</label>
+      &nbsp;
+      <input 
+        id={id}
+        type={type}
+        value={value}
+        onChange={onInputChange}
+      />
+    </>
+  );
 }
 
 export default App;
