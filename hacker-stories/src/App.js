@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef} from 'react';
 import './App.css';
 
-const stories = [
+const initialStories = [
   {
     title: 'React',
     url: 'https://reactjs.org/',
@@ -20,23 +20,17 @@ const stories = [
   }
 ];
 
+const getAsyncStories = () => 
+  new Promise((resolve) => 
+    setTimeout(
+      () => resolve({ data: { stories: initialStories } }),
+      2000
+    )
+  );
+
 
 const useSemiPersistentState = (key, initialState) => {
   const [value, setValue] = useState(localStorage.getItem(key) || initialState);
-
-    /*
-    this useEffect is used to trigger the side-effect
-    each time the searchTerm changes
-    
-    useEffect params:
-      - function that runs side-effect
-      - dependency array of variables
-    
-    important notes: 
-      - leaving out dependencies would make function
-          run on every render of component
-      - [] the function for side-effect is only called once
-    */
 
   useEffect(() => {
     localStorage.setItem(key, value);
@@ -49,8 +43,28 @@ const useSemiPersistentState = (key, initialState) => {
 const App = () => {
 
   const [searchTerm, setSearchTerm] = useSemiPersistentState('search', 'React');
+  const [stories, setStories] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
 
-  
+  useEffect(() => {
+    setIsLoading(true);
+
+    getAsyncStories()
+      .then(result => {
+      setStories(result.data.stories);
+      setIsLoading(false);
+    })
+    .catch(() => setIsError(true))
+  }, []);
+
+  const handleRemoveStory = (item) => {
+    const newStories = stories.filter((story) => item.objectID !== story.objectID);
+
+    setStories(newStories);
+
+  };
+
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
 
@@ -77,23 +91,29 @@ const App = () => {
 
       <hr />
 
-      <List list={searchedStories}/>
+      {isError && <p>Something went wrong ...</p>}
+
+      {isLoading ? (
+        <p>...Loading</p>
+      ): (
+        <List list={searchedStories} onRemoveItem={handleRemoveStory}/>
+      )}
 
     </div>
   );
 }
 
-const List = ({list}) => {
+const List = ({list, onRemoveItem}) => {
   return (
     <ul>
       {list.map((item) => (
-        <Item key={item.objectID} item={item} />
+        <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
       ))}
     </ul>
   );
 }
 
-const Item = ({item}) => (
+const Item = ({item, onRemoveItem}) => (
   <li>
     <span>
       <a href={item.url}>{item.title}</a>
@@ -101,6 +121,9 @@ const Item = ({item}) => (
     <span>{item.author}</span>
     <span>{item.num_comments}</span>
     <span>{item.points}</span>
+    <span>
+      <button type="button" onClick={() => onRemoveItem(item)}>Dismiss</button>
+    </span>
   </li>
 );
 
