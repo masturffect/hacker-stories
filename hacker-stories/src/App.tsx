@@ -4,7 +4,7 @@ import { ReactComponent as Check } from './check.svg';
 import * as Styled from './styles';
 
 type Story = {
-  objectId: string;
+  objectID: string;
   url: string;
   title: string;
   author: string;
@@ -72,7 +72,7 @@ const storiesReducer = (
       return {
         ...state,
         data: state.data.filter(
-          (story) => action.payload.objectId !== story.objectId
+          (story) => action.payload.objectID !== story.objectID
         ),
       };
     default:
@@ -211,7 +211,7 @@ const List = ({list, onRemoveItem}: ListProps) => {
   return (
     <ul>
       {list.map((item) => (
-        <Item key={item.objectId} item={item} onRemoveItem={onRemoveItem} />
+        <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
       ))}
     </ul>
   );
