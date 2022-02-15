@@ -1,6 +1,8 @@
-import React, { useEffect, useState, useRef, useReducer, useCallback } from 'react';
+import React, { useEffect, useState, useReducer, useCallback } from 'react';
 import axios from 'axios';
-import { ReactComponent as Check } from './check.svg';
+import { SearchForm } from './components/SearchForm';
+import { List } from './components/List';
+import { InputWithLabel } from './components/InputWithLabel';
 import * as Styled from './styles';
 
 type Story = {
@@ -16,6 +18,7 @@ type Stories = Array<Story>;
 
 type StoriesState = {
   data: Stories;
+  page: number;
   isLoading: boolean;
   isError: boolean;
 };
@@ -26,7 +29,10 @@ interface StoriesFetchInitAction {
 
 interface StoriesFetchSuccessAction {
   type: 'STORIES_FETCH_SUCCESS';
-  payload: Stories;
+  payload: {
+    list: Stories,
+    page: number
+  }
 }
 
 interface StoriesFetchFailureAction {
@@ -60,7 +66,11 @@ const storiesReducer = (
         ...state,
         isLoading: false,
         isError: false,
-        data: action.payload,
+        data: 
+          action.payload.page === 0
+          ? action.payload.list
+          : state.data.concat(action.payload.list),
+        page: action.payload.page,
       };
     case 'STORIES_FETCH_FAILURE':
       return {
@@ -93,14 +103,86 @@ const useSemiPersistentState = (
   return [value, setValue];
 }
 
-//1a.) used to fetch tech stories from query
-const API_ENDPOINT = 'https://hn.algolia.com/api/v1/search?query=';
+// used to fetch tech stories from query
+// rewrote api endpoint to be series of constants
+const API_BASE = 'https://hn.algolia.com/api/v1';
+const API_SEARCH = '/search';
+const PARAM_SEARCH = 'query=';
+const PARAM_PAGE = 'page=';
+
+// notice the ? in between
+const getUrl = (searchTerm: string, page: number) => 
+  `${API_BASE}${API_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}`;
+
+  /*
+    X
+    https://hn.algolia.com/api/v1/search?query=react
+    Y
+    https://hn.algolia.com/api/v1/search?query=react&page=0
+
+    get search term extracting between ? and &,
+    query parameter is directly after ? and parameters 
+      like page follow it 
+  */
+
+const extractSearchTerm = (url: string) => 
+  url.substring(url.lastIndexOf('?') +  1, url.lastIndexOf('&')).replace(PARAM_SEARCH, '');
+  /*
+    url:
+      https://hn.algolia.com/api/v1/search?query=react&page=0
+    url after substring:
+      query=react
+    url after replace:
+      react
+  */
+
+const getLastSearches = (urls: Array<string>) => 
+  urls
+    .reduce<string[]>((result , url, index) => {
+      const searchTerm = extractSearchTerm(url);
+
+      if(index === 0) {
+        return result.concat(searchTerm);
+      }
+
+      const previousSearchTerm = result[result.length - 1];
+
+      if(searchTerm === previousSearchTerm) {
+        return result;
+      }
+      else {
+        return result.concat(searchTerm);
+      }
+    }, [])
+    .slice(-6)
+    .slice(0, -1);
+
+
+//-----------------------------------------------------------------
 
 const App = () => {
 
   const [searchTerm, setSearchTerm] = useSemiPersistentState('search', 'React');
 
-  const [url, setUrl] = useState(`${API_ENDPOINT}${searchTerm}`);
+  //still wraps the returned value in []
+  const [urls, setUrls] = useState([getUrl(searchTerm, 0)]);
+
+  const handleMore = () => {
+    const lastUrl = urls[urls.length - 1];
+    const searchTerm = extractSearchTerm(lastUrl);
+    handleSearch(searchTerm, stories.page + 1);
+  }
+  const handleSearch = (searchTerm: string, page: number) => {
+    const url = getUrl(searchTerm, page);
+    setUrls(urls.concat(url));
+  }
+  const handleLastSearch = (searchTerm: string) => {
+    setSearchTerm(searchTerm);
+
+    handleSearch(searchTerm, 0);
+  };
+
+  const lastSearches = getLastSearches(urls);
 
   const handleSearchInput = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -111,13 +193,13 @@ const App = () => {
   const handleSearchSubmit = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    setUrl(`${API_ENDPOINT}${searchTerm}`);
+    handleSearch(searchTerm, 0);
 
     event.preventDefault();
   }
   const [stories, dispatchStories] = useReducer(
     storiesReducer, 
-    { data: [], isLoading: false, isError: false }
+    { data: [], page: 0, isLoading: false, isError: false }
   );
 
   // 1b.) move all data-fetching logic into function outside of side-effect
@@ -125,11 +207,15 @@ const App = () => {
     dispatchStories({ type: 'STORIES_FETCH_INIT' });
 
     try {
-      const results = await axios.get(url);
+      const lastUrl = urls[urls.length - 1];
+      const result = await axios.get(lastUrl);
   
       dispatchStories({
         type: 'STORIES_FETCH_SUCCESS',
-        payload: results.data.hits,
+        payload: {
+          list: result.data.hits,
+          page: result.data.page,
+        },
       });
     }
 
@@ -140,7 +226,7 @@ const App = () => {
     }
 
 
-  }, [url]); // 5b.) memoized function created every time dependency array changes !!!
+  }, [urls]); // 5b.) memoized function created every time dependency array changes !!!
 
   useEffect(() => {
     handleFetchStories(); // 3b.) useEffect runs again if dependency array changes
@@ -164,128 +250,45 @@ const App = () => {
         onSearchSubmit={handleSearchSubmit}
       />
 
+      <LastSearches 
+        lastSearches={lastSearches}
+        onLastSearch={handleLastSearch}
+      />
+
       {stories.isError && <p>Something went wrong ...</p>}
 
+      <List list={stories.data} onRemoveItem={handleRemoveStory}/>
+      
       {stories.isLoading ? (
         <p>...Loading</p>
       ): (
-        <List list={stories.data} onRemoveItem={handleRemoveStory}/>
+        <button type="button" onClick={handleMore}>
+          More
+        </button> 
       )}
 
     </Styled.StyledContainer>
   );
-}
-
-type SearchFormProps = {
-  searchTerm: string;
-  onSearchInput: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onSearchSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
-}
-
-const SearchForm = ({ searchTerm, onSearchInput, onSearchSubmit }: SearchFormProps) => (
-  <Styled.StyledSearchForm onSubmit={onSearchSubmit}>
-    <InputWithLabel 
-      id="search"
-      isFocused
-      value={searchTerm}
-      onInputChange={onSearchInput}
-    >
-      <strong>Search: </strong>
-    </InputWithLabel>
-
-    <Styled.StyledButtonLarge
-      type="submit"  
-      disabled={!searchTerm} 
-    >
-      Submit 
-    </Styled.StyledButtonLarge>
-  </Styled.StyledSearchForm>
-);
-
-type ListProps = {
-  list: Stories;
-  onRemoveItem: (item: Story) => void;
 };
 
-const List = ({list, onRemoveItem}: ListProps) => {
-  return (
-    <ul>
-      {list.map((item) => (
-        <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
-      ))}
-    </ul>
-  );
+type LastSearchesProps = {
+  lastSearches: Array<string>;
+  onLastSearch: (searchTerm: string) => void;
 }
 
-type ItemProps = {
-  item: Story;
-  onRemoveItem: (item: Story) => void;
-};
-
-const Item = ({ item, onRemoveItem }: ItemProps) => (
-  <Styled.StyledItem>
-    <Styled.StyledColumn  style={{width: '40%'}}>
-      <a href={item.url}>{item.title}</a>
-    </Styled.StyledColumn>
-    <Styled.StyledColumn style={{width: '40%'}}>{item.author}</Styled.StyledColumn>
-    <Styled.StyledColumn style={{width: '40%'}}>{item.num_comments}</Styled.StyledColumn>
-    <Styled.StyledColumn style={{width: '40%'}}>{item.points}</Styled.StyledColumn>
-    <Styled.StyledColumn style={{width: '40%'}}>
-      <Styled.StyledButtonSmall 
-        type="button" 
-        onClick={() => onRemoveItem(item)}
-      >
-        <Check height="18px" width="18px" />
-      </Styled.StyledButtonSmall>
-    </Styled.StyledColumn>
-  </Styled.StyledItem>
-);
-
-type InputWithLabelProps = {
-  id: string;
-  value: string;
-  type?: string;
-  onInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  isFocused?: boolean;
-  children: React.ReactNode
-
-}
-
-const InputWithLabel = ({ id, value, isFocused, type = 'text', onInputChange, children }: InputWithLabelProps) => {
-
-  // 1c.) create a ref -- a ref object is a persistent value which stays
-  // intact over the lifetime of a React component. It comes with a prop called current,
-  // which, unlike the ref object, can be changed.
-  const inputRef = useRef<HTMLInputElement>(null!);
-
-  // 3c.) opt into React's lifecycle w/ React's useEffect hook, which focuses on
-  // the input field when the component renders (or its dependencies change).
-  useEffect(() => {
-    if(isFocused && inputRef.current){
-      // 4c.) ref is passed to the input field's ref attribute, so its current property
-      // gives access to the element. This executes focus as a side-effect, but only
-      // if isFocused is set and current property is existent. 
-      inputRef.current.focus();
-    } 
-  }, [isFocused]);
-
-  return (
-    <>
-      <Styled.StyledLabel htmlFor={id}>{children}</Styled.StyledLabel>
-      &nbsp;
-      {/* 2c.) ref is passed to the input field's JSX-reserved ref attribute 
-        and the element instance is assigned to the changeable current component  */}
-      <Styled.StyledInput
-        ref={inputRef}
-        id={id}
-        type={type}
-        value={value}
-        onChange={onInputChange}
-      />
-    </>
-  );
-}
-
+const LastSearches = ({ lastSearches , onLastSearch }: LastSearchesProps) => (
+  <>
+    {lastSearches.map((searchTerm: string, index: number) => (
+        <button
+          key={searchTerm + index}
+          type="button"
+          onClick={() => onLastSearch(searchTerm)}
+        >
+          {searchTerm}
+        </button>
+    ))}
+  </>
+)
 export default App;
 
-export { storiesReducer, SearchForm, InputWithLabel, List, Item };
+export { storiesReducer, SearchForm, InputWithLabel };
