@@ -3,4 +3,4 @@
 - I implemented the project utilizing TypeScript and Styled Components
 - Needs styling refinement for desktop and mobile
 ## link to deployed project
-https://hacker-stories-12.web.app/
+https://hacker-stories-4c4e3.web.app/
