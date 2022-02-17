@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useReducer, useCallback } from 'react';
 import axios from 'axios';
-import { SearchForm } from './components/SearchForm';
-import { List } from './components/List';
-import { InputWithLabel } from './components/InputWithLabel';
+import { SearchForm } from './SearchForm';
+import { List } from './List';
+import { InputWithLabel } from './InputWithLabel';
 import * as Styled from './styles';
 
 type Story = {
@@ -258,7 +258,7 @@ const App = () => {
       {stories.isError && <p>Something went wrong ...</p>}
 
       <List list={stories.data} onRemoveItem={handleRemoveStory}/>
-      
+
       {stories.isLoading ? (
         <p>...Loading</p>
       ): (

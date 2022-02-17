@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { ReactComponent as Check } from '../check.svg';
-import { ReactComponent as  Up } from '../up.svg';
-import { ReactComponent as  Down } from '../down.svg';
-import * as Styled from '../styles';
+import { ReactComponent as Remove } from './remove.svg';
+import { ReactComponent as  Up } from './up.svg';
+import { ReactComponent as  Down } from './down.svg';
+import * as Styled from './styles';
 import { sortBy } from 'lodash';
 
 type Story = {
@@ -72,15 +72,15 @@ const List = ({list, onRemoveItem}: ListProps) => {
 
     return(
         <div>
-            <div>
-                <span>
-                    <button 
+            <div style={{marginBottom: '30px', paddingBottom: '10px', borderBottom: '3px solid black'}}>
+                <span style={{display: 'inline-block', width: '40%'}}>
+                    <Styled.StyledToggleButton
                     type="button" 
                     style={ buttonToggle[0].value ? {backgroundColor: 'black', color: 'white'} : {backgroundColor: 'white', color: 'black'} } 
                     onClick={() => {handleSort('TITLE'); handleButtonToggle('title');}}
                     >
                         Title
-                    </button>
+                    </Styled.StyledToggleButton>
                     {
                         buttonToggle[0].value ?
                         <Down height="16px" width="16px" />
@@ -88,14 +88,14 @@ const List = ({list, onRemoveItem}: ListProps) => {
                         <Up height="16px" width="16px"/>
                     }
                 </span>
-                <span>
-                    <button 
+                <span style={{display: 'inline-block', width: '30%'}}>
+                    <Styled.StyledToggleButton
                     type="button" 
                     style={ buttonToggle[1].value ? {backgroundColor: 'black', color: 'white'} : {backgroundColor: 'white', color: 'black'} } 
                     onClick={() => {handleSort('AUTHOR'); handleButtonToggle('author');}}
                     >
                         Author
-                    </button>
+                    </Styled.StyledToggleButton>
                     {
                         buttonToggle[1].value ?
                         <Down height="16px" width="16px" />
@@ -103,14 +103,14 @@ const List = ({list, onRemoveItem}: ListProps) => {
                         <Up height="16px" width="16px"/>
                     }
                 </span>
-                <span>
-                    <button 
+                <span style={{display: 'inline-block', width: '10%'}}>
+                    <Styled.StyledToggleButton 
                     type="button" 
                     style={ buttonToggle[2].value ? {backgroundColor: 'black', color: 'white'} : {backgroundColor: 'white', color: 'black'} } 
                     onClick={() => {handleSort('COMMENT'); handleButtonToggle('comments');}}
                     >
                         Comments
-                    </button>
+                    </Styled.StyledToggleButton>
                     {
                         buttonToggle[2].value ?
                         <Down height="16px" width="16px" />
@@ -118,14 +118,14 @@ const List = ({list, onRemoveItem}: ListProps) => {
                         <Up height="16px" width="16px"/>
                     }
                 </span>
-                <span>
-                    <button 
+                <span style={{display: 'inline-block', width: '10%'}}>
+                    <Styled.StyledToggleButton 
                     type="button" 
                     style={ buttonToggle[3].value ? {backgroundColor: 'black', color: 'white'} : {backgroundColor: 'white', color: 'black'} } 
                     onClick={() => {handleSort('POINT'); handleButtonToggle('points');}}
                     >
                         Points
-                    </button>
+                    </Styled.StyledToggleButton>
                     {
                         buttonToggle[3].value ?
                         <Down height="16px" width="16px" />
@@ -161,7 +161,7 @@ const Item = ({ item, onRemoveItem }: ItemProps) => (
             type="button" 
             onClick={() => onRemoveItem(item)}
         >
-            <Check data-testid="check" height="18px" width="18px" />
+            <Remove data-testid="check" height="18px" width="18px" />
         </Styled.StyledButtonSmall>
         </Styled.StyledColumn>
     </Styled.StyledItem>

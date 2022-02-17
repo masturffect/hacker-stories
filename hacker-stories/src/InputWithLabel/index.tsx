@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import * as Styled from '../styles';
+import { StyledLabel, StyledInput} from './styles';
 
 type InputWithLabelProps = {
     id: string;
@@ -31,11 +31,11 @@ const InputWithLabel = ({ id, value, isFocused, type = 'text', onInputChange, ch
   
     return (
       <>
-        <Styled.StyledLabel htmlFor={id}>{children}</Styled.StyledLabel>
+        <StyledLabel htmlFor={id}>{children}</StyledLabel>
         &nbsp;
         {/* 2c.) ref is passed to the input field's JSX-reserved ref attribute 
           and the element instance is assigned to the changeable current component  */}
-        <Styled.StyledInput
+        <StyledInput
           ref={inputRef}
           id={id}
           type={type}
